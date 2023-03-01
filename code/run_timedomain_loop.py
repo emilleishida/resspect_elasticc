@@ -18,30 +18,50 @@
 
 from resspect import time_domain_loop
 import pandas as pd
+import os
+
+####################################################################################
+#######################  User choices  #############################################
+
+###### For TOM integration
     
-days = [42, 50]
-training = 20
-strategy = 'UncSampling'
-n_estimators = 1000
-batch = 1
+days = [42, 50]             ## days you want to perform the query
+batch = 1                   # number of objects to be queried per day. For a 
+                            # taking into account telescope resources choose None
+                            # this will query a different number of objects each day
+
+training = 20               # number of points in initial training
+strategy = 'UncSampling'    # learning strategy
+
+# save query to file
+output_query_file_elasticc = '/media/RESSPECT/data/PLAsTiCC/ELAsTiCC_ids/queried/' + '/batch' + str(batch) + \
+                     '/' + strategy + '/queried_elasticc_ids_' + strategy + '_' + str(training) + '_batch' + str(batch) + '.csv'
+
+##################################################################################
+
 
 sep_files = True
 save_full_query= False
-    
-output_diag_file = '/media/RESSPECT/data/PLAsTiCC/ELAsTiCC_ids/metrics/' + \
-                    'metrics_' + strategy + '_' + str(training) + '_batch' + str(batch) + '.csv'
 
+# folder where queries will be stored
 output_query_file = '/media/RESSPECT/data/PLAsTiCC/ELAsTiCC_ids/queried/batch' + str(batch) + '/' + \
                     strategy + '/queried_' + strategy + '_' + str(training) + '_batch' + str(batch) + '.csv'
 
+output_diag_file = '/media/RESSPECT/data/PLAsTiCC/ELAsTiCC_ids/metrics/' + \
+                    'metrics_' + strategy + '_' + str(training) + '_batch' + str(batch) + '.csv'
+
 path_to_features_dir = '/media/RESSPECT/data/PLAsTiCC/for_pipeline/DDF/features/pool/'
   
+if batch == None:
+    budgets = (2. * 3600, 1. * 3600)
+else:
+    budgets = None
 
-budgets = None #(2. * 3600, 1. * 3600)
 classifier = 'RandomForest'
+n_estimators = 1000         # number of trees in the random forest algorithm
 clf_bootstrap = False #True
 feature_method = 'Bazin'
-screen = False
+screen = True
 fname_pattern = ['day_', '.csv']
 canonical = False
 queryable= True
@@ -72,11 +92,13 @@ features = pd.read_csv(output_query_file, index_col=False)
 new_id_set = []
 
 for i in range(features.shape[0]):
-    features.iloc[i]['id'] = ids_map[features.iloc[i]['id']]
-    features = features.rename(columns={'id':'diaObjectId'})
     
-output_query_file_elasticc = '/media/RESSPECT/data/PLAsTiCC/ELAsTiCC_ids/queried/' + '/batch' + str(batch) + \
-                    strategy + '/queried_elasticc_ids_' + strategy + '_' + str(training) + '_batch' + str(batch) + '.csv'
+    old_id = features.iloc[i]['id']
+    new_id = ids_map[ids_map['id'].values == old_id]['diaObjectId'].values[0]
+    
+    features.at[i, 'id'] = new_id
+
+features = features.rename(columns={'id':'diaObjectId'})
 
 features.to_csv(output_query_file_elasticc, index=False)
 os.remove(output_query_file)
